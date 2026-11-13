@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<persistence
+        xmlns="https://jakarta.ee/xml/ns/persistence"
+        version="3.2">
+
+    <!-- Unidad de persistencia utilizada por JPAUtil. -->
+    <persistence-unit
+            name="laboratorioPU"
+            transaction-type="RESOURCE_LOCAL">
+
+        <!-- Hibernate es el proveedor de persistencia. -->
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <!-- Entidades que representan las tablas del laboratorio. -->
+        <class>ni.edu.uam.laboratorioorm.model.Equipo</class>
+        <class>ni.edu.uam.laboratorioorm.model.TipoEquipo</class>
+
+        <properties>
+
+            <!-- Controlador JDBC de PostgreSQL. -->
+            <property
+                    name="jakarta.persistence.jdbc.driver"
+                    value="org.postgresql.Driver"/>
+
+            <!-- Dirección de la base de datos local. -->
+            <property
+                    name="jakarta.persistence.jdbc.url"
+                    value="jdbc:postgresql://localhost:5432/bd_laboratorio_orm"/>
+
+            <!-- Usuario de PostgreSQL. -->
+            <property
+                    name="jakarta.persistence.jdbc.user"
+                    value="postgres"/>
+
+            <!-- La contraseña se obtiene desde JPAUtil. -->
+
+            <!-- Valida las tablas existentes sin modificarlas. -->
+            <property
+                    name="hibernate.hbm2ddl.auto"
+                    value="validate"/>
+
+            <!-- Muestra las consultas SQL en consola. -->
+            <property
+                    name="hibernate.show_sql"
+                    value="true"/>
+
+            <!-- Mejora la presentación del SQL generado. -->
+            <property
+                    name="hibernate.format_sql"
+                    value="true"/>
+
+        </properties>
+    </persistence-unit>
+</persistence>
