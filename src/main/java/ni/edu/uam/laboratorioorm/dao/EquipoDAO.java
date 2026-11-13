@@ -1,12 +1,118 @@
 package ni.edu.uam.laboratorioorm.dao;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityTransaction;
 import ni.edu.uam.laboratorioorm.database.JPAUtil;
 import ni.edu.uam.laboratorioorm.model.Equipo;
+import ni.edu.uam.laboratorioorm.model.TipoEquipo;
 
 import java.util.List;
 
 public class EquipoDAO {
+
+    // Obtiene el tipo de equipo gestionado por el EntityManager actual.
+    private TipoEquipo obtenerTipoEquipo(EntityManager em, Equipo equipo) {
+        if (equipo.getTipoEquipo() == null || equipo.getTipoEquipo().getId() == null) {
+            throw new IllegalArgumentException("Debe seleccionar un tipo de equipo.");
+        }
+
+        Long idTipo = equipo.getTipoEquipo().getId();
+        TipoEquipo tipo = em.find(TipoEquipo.class, idTipo);
+
+        if (tipo == null) {
+            throw new IllegalArgumentException("El tipo de equipo seleccionado no existe.");
+        }
+
+        return tipo;
+    }
+
+    // Guarda un equipo relacionado con un tipo existente.
+    public void guardar(Equipo equipo) {
+        EntityManager em = JPAUtil.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+
+        try {
+            tx.begin();
+
+            TipoEquipo tipo = obtenerTipoEquipo(em, equipo);
+            equipo.setTipoEquipo(tipo);
+
+            em.persist(equipo);
+            tx.commit();
+
+        } catch (RuntimeException ex) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            throw ex;
+
+        } finally {
+            em.close();
+        }
+    }
+
+    // Actualiza los datos de un equipo existente.
+    public void actualizar(Equipo equipo) {
+        EntityManager em = JPAUtil.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+
+        try {
+            tx.begin();
+
+            if (equipo.getId() == null) {
+                throw new IllegalArgumentException("El equipo no tiene un ID.");
+            }
+
+            if (em.find(Equipo.class, equipo.getId()) == null) {
+                throw new IllegalArgumentException("El equipo ya no existe en la base de datos.");
+            }
+
+            TipoEquipo tipo = obtenerTipoEquipo(em, equipo);
+            equipo.setTipoEquipo(tipo);
+
+            em.merge(equipo);
+            tx.commit();
+
+        } catch (RuntimeException ex) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            throw ex;
+
+        } finally {
+            em.close();
+        }
+    }
+
+    // Elimina un equipo utilizando su identificador.
+    public boolean eliminar(long id) {
+        EntityManager em = JPAUtil.getEntityManager();
+        EntityTransaction tx = em.getTransaction();
+
+        try {
+            tx.begin();
+
+            Equipo equipo = em.find(Equipo.class, id);
+
+            if (equipo == null) {
+                tx.rollback();
+                return false;
+            }
+
+            em.remove(equipo);
+            tx.commit();
+            return true;
+
+        } catch (RuntimeException ex) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            throw ex;
+
+        } finally {
+            em.close();
+        }
+    }
 
     // Consulta los equipos junto con sus tipos.
     public List<Equipo> listar() {
