@@ -75,11 +75,23 @@
 
         <HBox alignment="CENTER" spacing="10.0">
             <children>
-                <Button text="Guardar" disable="true"/>
-                <Button text="Actualizar" disable="true"/>
-                <Button text="Eliminar" disable="true"/>
+                <Button fx:id="btnGuardar"
+                        text="Guardar"
+                        onAction="#guardarEquipo"/>
+
+                <Button fx:id="btnActualizar"
+                        text="Actualizar"
+                        disable="true"
+                        onAction="#actualizarEquipo"/>
+
+                <Button fx:id="btnEliminar"
+                        text="Eliminar"
+                        disable="true"
+                        onAction="#eliminarEquipo"/>
+
                 <Button text="Limpiar"
                         onAction="#limpiarCampos"/>
+
                 <Button text="Recargar"
                         onAction="#cargarEquipos"/>
             </children>

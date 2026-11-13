@@ -11,6 +11,7 @@ import ni.edu.uam.laboratorioorm.model.Equipo;
 import ni.edu.uam.laboratorioorm.model.TipoEquipo;
 
 import java.util.List;
+import java.util.Optional;
 
 public class EquipoController {
 
@@ -18,11 +19,14 @@ public class EquipoController {
     @FXML private TextField txtNombre;
     @FXML private TextField txtMarca;
     @FXML private TextField txtCantidad;
-    @FXML private TextField txtBuscarNombre;
 
     @FXML private ComboBox<TipoEquipo> cmbTipoEquipo;
     @FXML private ComboBox<TipoEquipo> cmbFiltroTipo;
     @FXML private ComboBox<String> cmbEstado;
+
+    @FXML private Button btnGuardar;
+    @FXML private Button btnActualizar;
+    @FXML private Button btnEliminar;
 
     @FXML private TableView<Equipo> tblEquipos;
 
@@ -41,7 +45,7 @@ public class EquipoController {
     @FXML
     public void initialize() {
 
-        // Relaciona las columnas con los atributos de Equipo.
+        // Relaciona las columnas con las propiedades de Equipo.
         colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigo"));
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
         colMarca.setCellValueFactory(new PropertyValueFactory<>("marca"));
@@ -49,14 +53,14 @@ public class EquipoController {
         colCantidad.setCellValueFactory(new PropertyValueFactory<>("cantidad"));
         colTipo.setCellValueFactory(new PropertyValueFactory<>("tipoEquipo"));
 
-        // Carga los estados permitidos.
+        // Estados permitidos para los equipos.
         cmbEstado.setItems(FXCollections.observableArrayList(
                 "Disponible",
                 "En mantenimiento",
                 "Fuera de servicio"
         ));
 
-        // Detecta cuando se selecciona un equipo de la tabla.
+        // Detecta la selección de un equipo en la tabla.
         tblEquipos.getSelectionModel().selectedItemProperty()
                 .addListener((obs, anterior, actual) -> {
                     if (actual != null) {
@@ -64,16 +68,11 @@ public class EquipoController {
                     }
                 });
 
-        try {
-            cargarTipos();
-            cargarEquipos();
-
-        } catch (RuntimeException ex) {
-            mostrarError("No se pudieron cargar los datos.", ex);
-        }
+        actualizarBotones();
+        cargarEquipos();
     }
 
-    // Consulta los tipos de equipo para los ComboBox.
+    // Consulta los tipos disponibles.
     private void cargarTipos() {
         List<TipoEquipo> tipos = tipoEquipoDAO.listar();
 
@@ -81,21 +80,183 @@ public class EquipoController {
         cmbFiltroTipo.setItems(FXCollections.observableArrayList(tipos));
     }
 
-    // Consulta los equipos y actualiza la tabla.
+    // Recarga los registros desde PostgreSQL.
+    private void actualizarListado() {
+        cargarTipos();
+
+        List<Equipo> equipos = equipoDAO.listar();
+        tblEquipos.setItems(FXCollections.observableArrayList(equipos));
+
+        limpiarCampos();
+    }
+
     @FXML
     private void cargarEquipos() {
         try {
-            List<Equipo> equipos = equipoDAO.listar();
-
-            tblEquipos.setItems(FXCollections.observableArrayList(equipos));
-            limpiarCampos();
-
+            actualizarListado();
         } catch (RuntimeException ex) {
             mostrarError("No se pudieron cargar los equipos.", ex);
         }
     }
 
-    // Muestra en el formulario los datos del equipo seleccionado.
+    // Registra un equipo nuevo.
+    @FXML
+    private void guardarEquipo() {
+        Equipo equipo = obtenerFormulario();
+
+        if (equipo == null) {
+            return;
+        }
+
+        try {
+            equipoDAO.guardar(equipo);
+        } catch (RuntimeException ex) {
+            mostrarError("No se pudo guardar el equipo.", ex);
+            return;
+        }
+
+        finalizarOperacion("Equipo guardado correctamente.");
+    }
+
+    // Modifica el equipo seleccionado.
+    @FXML
+    private void actualizarEquipo() {
+        if (idSeleccionado == null) {
+            return;
+        }
+
+        Equipo equipo = obtenerFormulario();
+
+        if (equipo == null) {
+            return;
+        }
+
+        equipo.setId(idSeleccionado);
+
+        try {
+            equipoDAO.actualizar(equipo);
+        } catch (RuntimeException ex) {
+            mostrarError("No se pudo actualizar el equipo.", ex);
+            return;
+        }
+
+        finalizarOperacion("Equipo actualizado correctamente.");
+    }
+
+    // Elimina un equipo después de solicitar confirmación.
+    @FXML
+    private void eliminarEquipo() {
+        if (idSeleccionado == null) {
+            return;
+        }
+
+        Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmacion.setTitle("Confirmar eliminación");
+        confirmacion.setHeaderText("Eliminar equipo");
+        confirmacion.setContentText(
+                "¿Está seguro de eliminar el equipo seleccionado?"
+        );
+
+        Optional<ButtonType> resultado = confirmacion.showAndWait();
+
+        if (resultado.isEmpty() || resultado.get() != ButtonType.OK) {
+            return;
+        }
+
+        try {
+            boolean eliminado = equipoDAO.eliminar(idSeleccionado);
+
+            if (!eliminado) {
+                mostrarAlerta(
+                        Alert.AlertType.WARNING,
+                        "El equipo ya no existe en la base de datos."
+                );
+                return;
+            }
+
+        } catch (RuntimeException ex) {
+            mostrarError("No se pudo eliminar el equipo.", ex);
+            return;
+        }
+
+        finalizarOperacion("Equipo eliminado correctamente.");
+    }
+
+    // Valida los campos y construye la entidad Equipo.
+    private Equipo obtenerFormulario() {
+        String codigo = txtCodigo.getText().trim();
+        String nombre = txtNombre.getText().trim();
+        String marca = txtMarca.getText().trim();
+
+        if (codigo.isEmpty() || nombre.isEmpty()) {
+            mostrarAlerta(
+                    Alert.AlertType.WARNING,
+                    "El código y el nombre son obligatorios."
+            );
+            return null;
+        }
+
+        if (codigo.length() > 30 || nombre.length() > 150
+                || marca.length() > 100) {
+            mostrarAlerta(
+                    Alert.AlertType.WARNING,
+                    "Revise la longitud del código, nombre o marca."
+            );
+            return null;
+        }
+
+        int cantidad;
+
+        try {
+            cantidad = Integer.parseInt(txtCantidad.getText().trim());
+        } catch (NumberFormatException ex) {
+            mostrarAlerta(
+                    Alert.AlertType.WARNING,
+                    "La cantidad debe ser un número entero."
+            );
+            return null;
+        }
+
+        if (cantidad < 0) {
+            mostrarAlerta(
+                    Alert.AlertType.WARNING,
+                    "La cantidad no puede ser negativa."
+            );
+            return null;
+        }
+
+        TipoEquipo tipo = cmbTipoEquipo.getValue();
+
+        if (tipo == null) {
+            mostrarAlerta(
+                    Alert.AlertType.WARNING,
+                    "Debe seleccionar un tipo de equipo."
+            );
+            return null;
+        }
+
+        String estado = cmbEstado.getValue();
+
+        if (estado == null || !cmbEstado.getItems().contains(estado)) {
+            mostrarAlerta(
+                    Alert.AlertType.WARNING,
+                    "Debe seleccionar un estado válido."
+            );
+            return null;
+        }
+
+        Equipo equipo = new Equipo();
+        equipo.setCodigo(codigo);
+        equipo.setNombre(nombre);
+        equipo.setMarca(marca.isEmpty() ? null : marca);
+        equipo.setCantidad(cantidad);
+        equipo.setEstado(estado);
+        equipo.setTipoEquipo(tipo);
+
+        return equipo;
+    }
+
+    // Coloca los datos seleccionados en el formulario.
     private void seleccionarEquipo(Equipo equipo) {
         idSeleccionado = equipo.getId();
 
@@ -106,9 +267,11 @@ public class EquipoController {
 
         cmbEstado.setValue(equipo.getEstado());
         cmbTipoEquipo.setValue(buscarTipo(equipo.getTipoEquipo()));
+
+        actualizarBotones();
     }
 
-    // Busca en el ComboBox el tipo correspondiente por su ID.
+    // Encuentra el tipo equivalente dentro del ComboBox.
     private TipoEquipo buscarTipo(TipoEquipo tipo) {
         if (tipo == null) {
             return null;
@@ -123,7 +286,16 @@ public class EquipoController {
         return null;
     }
 
-    // Limpia el formulario y la selección de la tabla.
+    // Habilita los botones según exista un equipo seleccionado.
+    private void actualizarBotones() {
+        boolean sinSeleccion = idSeleccionado == null;
+
+        btnGuardar.setDisable(!sinSeleccion);
+        btnActualizar.setDisable(sinSeleccion);
+        btnEliminar.setDisable(sinSeleccion);
+    }
+
+    // Limpia el formulario y elimina la selección actual.
     @FXML
     private void limpiarCampos() {
         txtCodigo.clear();
@@ -136,17 +308,37 @@ public class EquipoController {
 
         idSeleccionado = null;
         tblEquipos.getSelectionModel().clearSelection();
+
+        actualizarBotones();
     }
 
-    // Muestra los errores de la aplicación mediante Alert.
+    // Recarga la tabla después de una operación exitosa.
+    private void finalizarOperacion(String mensaje) {
+        try {
+            actualizarListado();
+            mostrarAlerta(Alert.AlertType.INFORMATION, mensaje);
+        } catch (RuntimeException ex) {
+            mostrarError(
+                    "La operación se completó, pero no se pudo actualizar la tabla.",
+                    ex
+            );
+        }
+    }
+
+    // Registra los errores en consola y los muestra al usuario.
     private void mostrarError(String mensaje, RuntimeException ex) {
         ex.printStackTrace();
 
-        Alert alerta = new Alert(
+        String detalle = ex.getMessage();
+        mostrarAlerta(
                 Alert.AlertType.ERROR,
-                mensaje + " " + ex.getMessage()
+                detalle == null ? mensaje : mensaje + "\n" + detalle
         );
+    }
 
+    // Muestra mensajes mediante Alert.
+    private void mostrarAlerta(Alert.AlertType tipo, String mensaje) {
+        Alert alerta = new Alert(tipo, mensaje);
         alerta.setHeaderText(null);
         alerta.showAndWait();
     }
