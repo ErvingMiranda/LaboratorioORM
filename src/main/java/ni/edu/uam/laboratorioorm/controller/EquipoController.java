@@ -1,5 +1,6 @@
 package ni.edu.uam.laboratorioorm.controller;
 
+import jakarta.persistence.RollbackException;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -9,6 +10,7 @@ import ni.edu.uam.laboratorioorm.dao.EquipoDAO;
 import ni.edu.uam.laboratorioorm.dao.TipoEquipoDAO;
 import ni.edu.uam.laboratorioorm.model.Equipo;
 import ni.edu.uam.laboratorioorm.model.TipoEquipo;
+import org.hibernate.exception.ConstraintViolationException;
 
 import java.util.List;
 import java.util.Optional;
@@ -358,7 +360,14 @@ public class EquipoController {
     private void mostrarError(String mensaje, RuntimeException ex) {
         ex.printStackTrace();
 
+        Throwable causa = ex instanceof RollbackException ? ex.getCause() : ex;
         String detalle = ex.getMessage();
+        if (causa instanceof ConstraintViolationException violacion
+                && "23505".equals(violacion.getSQLState())
+                && "equipo_codigo_key".equals(violacion.getConstraintName())) {
+            detalle = "Ya existe un equipo con ese código.";
+        }
+
         mostrarAlerta(
                 Alert.AlertType.ERROR,
                 detalle == null ? mensaje : mensaje + "\n" + detalle

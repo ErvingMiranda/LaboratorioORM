@@ -1,0 +1,7 @@
+Extracto de la consola de la prueba de integridad.
+
+ROLLBACK: INSERT de QA-RB-261112 ejecutado dentro de la transacción, ID 23.
+WARN: HHH000247: ErrorCode: 0, SQLState: 23505
+  Detail: Key (codigo)=(LAB-001) already exists.
+ROLLBACK: SQLSTATE 23505, restricción equipo_codigo_key, rollback() ejecutado, transacción inactiva.
+ROLLBACK: consulta con otro EntityManager: QA-RB-261112 = 0, LAB-001 = 1.
