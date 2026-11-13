@@ -102,18 +102,22 @@
         <HBox alignment="CENTER_LEFT" spacing="10.0">
             <children>
                 <Label text="Buscar por nombre:"/>
+
                 <TextField fx:id="txtBuscarNombre"
                            promptText="Nombre del equipo"
-                           disable="true"
                            HBox.hgrow="ALWAYS"/>
 
                 <Label text="Filtrar por tipo:"/>
+
                 <ComboBox fx:id="cmbFiltroTipo"
                           promptText="Todos los tipos"
-                          prefWidth="170.0"
-                          disable="true"/>
+                          prefWidth="170.0"/>
 
-                <Button text="Aplicar filtros" disable="true"/>
+                <Button text="Aplicar filtros"
+                        onAction="#aplicarFiltros"/>
+
+                <Button text="Limpiar filtros"
+                        onAction="#limpiarFiltros"/>
             </children>
         </HBox>
 
@@ -122,18 +126,23 @@
                 <TableColumn fx:id="colCodigo"
                              text="Código"
                              prefWidth="110.0"/>
+
                 <TableColumn fx:id="colNombre"
                              text="Nombre"
                              prefWidth="210.0"/>
+
                 <TableColumn fx:id="colMarca"
                              text="Marca"
                              prefWidth="120.0"/>
+
                 <TableColumn fx:id="colEstado"
                              text="Estado"
                              prefWidth="160.0"/>
+
                 <TableColumn fx:id="colCantidad"
                              text="Cantidad"
                              prefWidth="90.0"/>
+
                 <TableColumn fx:id="colTipo"
                              text="Tipo de equipo"
                              prefWidth="170.0"/>

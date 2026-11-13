@@ -19,6 +19,7 @@ public class EquipoController {
     @FXML private TextField txtNombre;
     @FXML private TextField txtMarca;
     @FXML private TextField txtCantidad;
+    @FXML private TextField txtBuscarNombre;
 
     @FXML private ComboBox<TipoEquipo> cmbTipoEquipo;
     @FXML private ComboBox<TipoEquipo> cmbFiltroTipo;
@@ -80,9 +81,12 @@ public class EquipoController {
         cmbFiltroTipo.setItems(FXCollections.observableArrayList(tipos));
     }
 
-    // Recarga los registros desde PostgreSQL.
+    // Recupera todos los equipos y restablece los filtros.
     private void actualizarListado() {
         cargarTipos();
+
+        txtBuscarNombre.clear();
+        cmbFiltroTipo.setValue(null);
 
         List<Equipo> equipos = equipoDAO.listar();
         tblEquipos.setItems(FXCollections.observableArrayList(equipos));
@@ -97,6 +101,30 @@ public class EquipoController {
         } catch (RuntimeException ex) {
             mostrarError("No se pudieron cargar los equipos.", ex);
         }
+    }
+
+    // Busca por nombre, tipo de equipo o ambos.
+    @FXML
+    private void aplicarFiltros() {
+        String nombre = txtBuscarNombre.getText().trim();
+        TipoEquipo tipo = cmbFiltroTipo.getValue();
+
+        try {
+            List<Equipo> equipos = equipoDAO.buscar(nombre, tipo);
+            tblEquipos.setItems(FXCollections.observableArrayList(equipos));
+            limpiarCampos();
+
+        } catch (RuntimeException ex) {
+            mostrarError("No se pudieron aplicar los filtros.", ex);
+        }
+    }
+
+    // Elimina los criterios de búsqueda y muestra todos los equipos.
+    @FXML
+    private void limpiarFiltros() {
+        txtBuscarNombre.clear();
+        cmbFiltroTipo.setValue(null);
+        cargarEquipos();
     }
 
     // Registra un equipo nuevo.
@@ -286,11 +314,11 @@ public class EquipoController {
         return null;
     }
 
-    // Habilita los botones según exista un equipo seleccionado.
+    // Actualizar y Eliminar requieren una selección; Guardar siempre está disponible.
     private void actualizarBotones() {
         boolean sinSeleccion = idSeleccionado == null;
 
-        btnGuardar.setDisable(!sinSeleccion);
+        btnGuardar.setDisable(false);
         btnActualizar.setDisable(sinSeleccion);
         btnEliminar.setDisable(sinSeleccion);
     }
@@ -312,11 +340,12 @@ public class EquipoController {
         actualizarBotones();
     }
 
-    // Recarga la tabla después de una operación exitosa.
+    // Recarga los datos después de una operación exitosa.
     private void finalizarOperacion(String mensaje) {
         try {
             actualizarListado();
             mostrarAlerta(Alert.AlertType.INFORMATION, mensaje);
+
         } catch (RuntimeException ex) {
             mostrarError(
                     "La operación se completó, pero no se pudo actualizar la tabla.",
